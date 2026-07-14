@@ -3,3 +3,4 @@ flake.nix
 flake.lock
 .envrc
 /.direnv
+scheme.md
