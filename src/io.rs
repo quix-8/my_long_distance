@@ -4,6 +4,7 @@ use chrono::Local;
 use csv;
 use serde;
 use serde_json;
+use std::error::Error;
 use std::fs::File;
 use std::io;
 
@@ -21,7 +22,7 @@ struct Log {
     time_end: DateTime<Local>,
 }
 
-fn load_csv() -> std::io::Result<()> {
+fn load_csv() -> Result<Vec<Bus>, Box<dyn Error>> {
     let mut schedule: Vec<Bus> = Vec::new();
     let f = File::open("schedule.csv")?;
     let mut rdr = csv::Reader::from_reader(f);
@@ -31,10 +32,10 @@ fn load_csv() -> std::io::Result<()> {
         let record: Bus = result?;
         schedule.push(record);
     }
-    Ok(())
+    Ok(schedule)
 }
 
-fn load_logs() -> std::io::Result<()> {
+fn load_logs() -> Result<Vec<Log>, Box<dyn Error>> {
     let mut logs: Vec<Log> = Vec::new();
     let f = File::open("log.csv")?;
     let mut rdr = csv::Reader::from_reader(f);
@@ -44,5 +45,5 @@ fn load_logs() -> std::io::Result<()> {
         let record: Log = result?;
         logs.push(record);
     }
-    Ok(())
+    Ok(logs)
 }
