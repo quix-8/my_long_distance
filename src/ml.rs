@@ -67,7 +67,70 @@ impl RouteState {
     pub fn get_predicted_cost(&self, target_day: usize, today_days: u32) -> f32 {
         let predict = (self.base_time + self.trend) * self.seasonal_factors[target_day];
         let left_behind = today_days - self.last_updated_days;
-        let risk = self.variance * 1.05 * left_behind as f32;
+        let risk = (self.variance * (1.05_f32).powi(left_behind as i32)).min(15.0);
         predict + risk
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Тест 1: Базовое обучение. Проверяем, что модель подстраивается под новую реальность.
+    #[test]
+    fn test_normal_learning() {
+        let mut route = RouteState::new(20.0);
+
+        // Понедельник (индекс 0). Ехали 25 минут.
+        route.update_from_reality(25.0, 0, 1);
+
+        // Проверяем, что база сдвинулась вверх (от 20.0 к 25.0)
+        assert!(route.base_time > 20.0, "База должна была вырасти");
+
+        // Проверяем, что коэффициент понедельника стал больше 1.0
+        assert!(
+            route.seasonal_factors[0] > 1.0,
+            "Коэффициент понедельника должен вырасти"
+        );
+
+        // Проверяем тренд (он должен стать положительным)
+        assert!(route.trend > 0.0, "Тренд должен быть положительным");
+    }
+
+    // Тест 2: Защита от аномалий (ДТП)
+    #[test]
+    fn test_anomaly_rejection() {
+        let mut route = RouteState::new(20.0);
+        let initial_base = route.base_time;
+
+        // Жесткая аномалия: ехали 60 минут (при variance = 2.0 порог срабатывания = 6.0)
+        route.update_from_reality(60.0, 1, 2);
+
+        // База не должна была измениться!
+        assert_eq!(
+            route.base_time, initial_base,
+            "Аномалия не должна менять базу"
+        );
+
+        // Счетчик аномалий должен вырасти
+        assert_eq!(route.anomaly_streak, 1, "Счетчик аномалий должен стать 1");
+    }
+
+    // Тест 3: Инфляция неопределенности ("Ржавчина")
+    #[test]
+    fn test_rust_inflation() {
+        let route = RouteState::new(20.0);
+
+        // Спрашиваем прогноз "сегодня" (прошло 0 дней)
+        let cost_today = route.get_predicted_cost(0, 0);
+
+        // Спрашиваем прогноз "через 10 дней"
+        let cost_future = route.get_predicted_cost(0, 10);
+
+        // Будущий прогноз должен быть дороже из-за "ржавчины"
+        assert!(
+            cost_future > cost_today,
+            "Прогноз через 10 дней должен быть дороже из-за ржавчины"
+        );
     }
 }

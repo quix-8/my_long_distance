@@ -13,8 +13,8 @@ pub struct Adapter {
 }
 
 impl Adapter {
-    fn new(&mut self, m: HashMap<String, petgraph::graph::EdgeIndex>) {
-        self.map = m;
+    fn new(&mut self, m: HashMap<String, petgraph::graph::EdgeIndex>) -> Self {
+        Self { map: m }
     }
     fn get_time(input: &TimeInput) -> Option<f32> {
         match input {
