@@ -2,6 +2,7 @@ use chrono::DateTime;
 use chrono::Local;
 use csv;
 use serde;
+use serde::Deserialize;
 use serde_json;
 use std::error::Error;
 use std::fs::File;
@@ -13,12 +14,19 @@ pub struct Bus {
     time: DateTime<Local>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Deserialize, Debug)]
+#[serde(untagged)]
+pub enum TimeInput {
+    Duration(f32),     // Сработает, если просто 43
+    TimeRange(String), // Сработает, если "07:45-09:12"
+}
+
+// Твоя сырая строчка из лога теперь выглядит так:
+#[derive(Deserialize, Debug)]
 pub struct Log {
-    date: DateTime<Local>,
-    id: u8,
-    time_start: DateTime<Local>,
-    time_end: DateTime<Local>,
+    pub date: String,
+    pub route_name: String,
+    pub time_spent: TimeInput,
 }
 
 pub fn load_schedule() -> Result<Vec<Bus>, Box<dyn Error>> {

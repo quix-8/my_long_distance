@@ -8,6 +8,12 @@ const BETA: f32 = 0.1;
 const GAMMA: f32 = 0.1;
 const DELTA: f32 = 0.1;
 
+pub struct ParsedData {
+    pub edge_index: petgraph::graph::EdgeIndex, // Конкретное ребро в графе
+    pub day_of_week: usize,                     // 0..6 (Пн..Вс)
+    pub duration_minutes: f32,                  // Чистое время поездки
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RouteState {
     pub base_time: f32,
