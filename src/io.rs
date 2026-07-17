@@ -1,4 +1,3 @@
-use chrono::Date;
 use chrono::DateTime;
 use chrono::Local;
 use csv;
@@ -9,20 +8,20 @@ use std::fs::File;
 use std::io;
 
 #[derive(Debug, serde::Deserialize)]
-struct Bus {
+pub struct Bus {
     id: u8,
     time: DateTime<Local>,
 }
 
 #[derive(Debug, serde::Deserialize)]
-struct Log {
+pub struct Log {
     date: DateTime<Local>,
     id: u8,
     time_start: DateTime<Local>,
     time_end: DateTime<Local>,
 }
 
-fn load_csv() -> Result<Vec<Bus>, Box<dyn Error>> {
+pub fn load_schedule() -> Result<Vec<Bus>, Box<dyn Error>> {
     let mut schedule: Vec<Bus> = Vec::new();
     let f = File::open("schedule.csv")?;
     let mut rdr = csv::Reader::from_reader(f);
@@ -35,7 +34,7 @@ fn load_csv() -> Result<Vec<Bus>, Box<dyn Error>> {
     Ok(schedule)
 }
 
-fn load_logs() -> Result<Vec<Log>, Box<dyn Error>> {
+pub fn load_logs() -> Result<Vec<Log>, Box<dyn Error>> {
     let mut logs: Vec<Log> = Vec::new();
     let f = File::open("log.csv")?;
     let mut rdr = csv::Reader::from_reader(f);
