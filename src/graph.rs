@@ -7,6 +7,7 @@ use petgraph::Graph;
 use petgraph::algo::astar;
 use petgraph::graph::NodeIndex;
 use serde::{Deserialize, Serialize};
+use std::any;
 use std::collections::HashMap;
 use std::{default, error::Error, fs};
 
@@ -92,14 +93,14 @@ pub fn find_best_route(
     }
 }
 
-fn load_graph() -> Result<Graph<Stop, ml::RouteState>, Box<dyn Error>> {
+pub fn load_graph() -> Result<Graph<Stop, ml::RouteState>, anyhow::Error> {
     let loaded_json = fs::read_to_string("graph.json")?;
     let loaded_graph: Graph<Stop, ml::RouteState> = serde_json::from_str(&loaded_json)?;
     println!("Граф успешно загружен из файла!");
     Ok(loaded_graph)
 }
 
-fn save_graph(graph: &Graph<Stop, ml::RouteState>) -> anyhow::Result<()> {
+pub fn save_graph(graph: &Graph<Stop, ml::RouteState>) -> anyhow::Result<()> {
     let json_data = serde_json::to_string_pretty(&graph)?;
     fs::write("graph.json", &json_data)?;
     println!("Граф успешно сохранен в graph.json!");
