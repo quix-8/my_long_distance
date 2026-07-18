@@ -17,29 +17,16 @@ pub struct Bus {
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum TimeInput {
-    Duration(f32),     // Сработает, если просто 43
-    TimeRange(String), // Сработает, если "07:45-09:12"
+    Duration(f32),
+    TimeRange(String),
 }
 
-// Твоя сырая строчка из лога теперь выглядит так:
 #[derive(Deserialize, Debug)]
 pub struct Log {
     pub date: String,
+    pub day_of_week: String,
     pub route_name: String,
     pub time_spent: TimeInput,
-}
-
-pub fn load_schedule() -> Result<Vec<Bus>, Box<dyn Error>> {
-    let mut schedule: Vec<Bus> = Vec::new();
-    let f = File::open("schedule.csv")?;
-    let mut rdr = csv::Reader::from_reader(f);
-    for result in rdr.deserialize() {
-        // Notice that we need to provide a type hint for automatic
-        // deserialization.
-        let record: Bus = result?;
-        schedule.push(record);
-    }
-    Ok(schedule)
 }
 
 pub fn load_logs() -> Result<Vec<Log>, Box<dyn Error>> {
@@ -47,8 +34,6 @@ pub fn load_logs() -> Result<Vec<Log>, Box<dyn Error>> {
     let f = File::open("log.csv")?;
     let mut rdr = csv::Reader::from_reader(f);
     for result in rdr.deserialize() {
-        // Notice that we need to provide a type hint for automatic
-        // deserialization.
         let record: Log = result?;
         logs.push(record);
     }

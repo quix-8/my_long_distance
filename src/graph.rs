@@ -4,17 +4,24 @@ use crate::ml;
 use crate::ml::ParsedData;
 use chrono::NaiveTime;
 use petgraph::Graph;
+use petgraph::algo::astar;
+use petgraph::graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::{default, error::Error, fs};
 
 pub struct Adapter {
     map: HashMap<String, petgraph::graph::EdgeIndex>,
+    days: HashMap<String, usize>,
 }
 
 impl Adapter {
-    fn new(&mut self, m: HashMap<String, petgraph::graph::EdgeIndex>) -> Self {
-        Self { map: m }
+    fn new(
+        &mut self,
+        m: HashMap<String, petgraph::graph::EdgeIndex>,
+        d: HashMap<String, usize>,
+    ) -> Self {
+        Self { map: m, days: d }
     }
     fn get_time(input: &TimeInput) -> Option<f32> {
         match input {
@@ -41,10 +48,11 @@ impl Adapter {
     pub fn transform(&self, log: Log) -> Option<ParsedData> {
         let index = self.map.get(&log.route_name)?;
         let time = Self::get_time(&log.time_spent)?;
+        let day = self.days.get(&log.day_of_week)?;
 
         Some(ParsedData {
             edge_index: *index,
-            day_of_week: 1, // заглушка
+            day_of_week: *day,
             duration_minutes: time,
         })
     }
@@ -53,6 +61,35 @@ impl Adapter {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Stop {
     pub name: String,
+}
+pub fn find_best_route(
+    graph: &Graph<Stop, ml::RouteState>,
+    start: NodeIndex,
+    goal: NodeIndex,
+    target_day: usize,
+    today_days: u32,
+) -> Option<(f32, Vec<String>)> {
+    let result = astar(
+        graph,
+        start,
+        |finish| finish == goal,
+        |e| {
+            let state = e.weight();
+            state.get_predicted_cost(target_day, today_days)
+        },
+        |_| 0.0,
+    );
+    match result {
+        Some((total_cost, path_indices)) => {
+            let route_names: Vec<String> = path_indices
+                .iter()
+                .map(|&idx| graph[idx].name.clone())
+                .collect();
+
+            Some((total_cost, route_names))
+        }
+        None => None,
+    }
 }
 
 fn load_graph() -> Result<Graph<Stop, ml::RouteState>, Box<dyn Error>> {

@@ -25,7 +25,6 @@ pub struct RouteState {
 }
 
 impl RouteState {
-    // Конструктор: рождение нового маршрута (например, из расписания)
     pub fn new(initial_time: f32) -> Self {
         Self {
             base_time: initial_time,
