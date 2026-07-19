@@ -1,18 +1,23 @@
 use chrono::DateTime;
 use chrono::Local;
 use csv;
+use petgraph::Graph;
 use serde;
 use serde::Deserialize;
 use serde_json;
+use std::collections::HashMap;
 use std::error::Error;
 use std::fs::File;
 use std::io;
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Bus {
-    id: u8,
-    time: DateTime<Local>,
-}
+use crate::graph::Stop;
+use crate::ml::RouteState;
+
+// #[derive(Debug, serde::Deserialize)]
+// pub struct Bus {
+//     id: u8,
+//     time: DateTime<Local>,
+// }
 
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
@@ -60,4 +65,11 @@ pub fn clear_and_archive_logs() -> Result<(), Box<dyn std::error::Error>> {
     fs::write("log.csv", "date,day_of_week,route_name,time_spent\n")?;
 
     Ok(())
+}
+
+pub fn get_data_map(
+    gr: &Graph<Stop, RouteState>,
+) -> Result<HashMap<String, petgraph::graph::EdgeIndex>, anyhow::Error> {
+    let log_map: HashMap<String, petgraph::graph::EdgeIndex> = HashMap::new();
+    Ok(log_map)
 }

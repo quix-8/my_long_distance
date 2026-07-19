@@ -2,6 +2,7 @@ use crate::io::Log;
 use crate::io::TimeInput;
 use crate::ml;
 use crate::ml::ParsedData;
+use crate::ml::RouteState;
 use chrono::NaiveTime;
 use petgraph::Graph;
 use petgraph::algo::astar;
@@ -9,7 +10,9 @@ use petgraph::graph::NodeIndex;
 use serde::{Deserialize, Serialize};
 use std::any;
 use std::collections::HashMap;
-use std::{default, error::Error, fs};
+use std::fs;
+use std::io::{self, Write};
+use std::{default, error::Error};
 
 pub struct Adapter {
     map: HashMap<String, petgraph::graph::EdgeIndex>,
@@ -64,10 +67,10 @@ pub struct Stop {
     pub name: String,
 }
 pub fn find_best_route(
-    graph: &Graph<Stop, ml::RouteState>,
+    graph: &Graph<Stop, RouteState>,
     start: NodeIndex,
     goal: NodeIndex,
-    target_day: usize,
+    day_of_week: usize,
     today_days: u32,
 ) -> Option<(f32, Vec<String>)> {
     let result = astar(
@@ -76,7 +79,7 @@ pub fn find_best_route(
         |finish| finish == goal,
         |e| {
             let state = e.weight();
-            state.get_predicted_cost(target_day, today_days)
+            state.get_predicted_cost(day_of_week, today_days)
         },
         |_| 0.0,
     );
@@ -93,14 +96,69 @@ pub fn find_best_route(
     }
 }
 
-pub fn load_graph() -> Result<Graph<Stop, ml::RouteState>, anyhow::Error> {
+fn prompt(message: &str) -> String {
+    print!("{}", message);
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    input.trim().to_string()
+}
+
+// USAFE!! REWRITE WITHOUT .unwrap();
+pub fn generate() {
+    println!("=== Генератор Графа ===");
+    let mut graph = Graph::<Stop, RouteState>::new();
+    let mut nodes = Vec::new();
+
+    println!("\n--- Добавление остановок ---");
+    loop {
+        let name = prompt("Введите название остановки (или пустую строку для завершения): ");
+        if name.is_empty() {
+            break;
+        }
+        let node_index = graph.add_node(Stop { name: name.clone() });
+        nodes.push((node_index, name));
+    }
+
+    println!("\n--- Создание маршрутов (ребер) ---");
+    loop {
+        println!("\nДоступные остановки:");
+        for (i, (_, name)) in nodes.iter().enumerate() {
+            println!("{}: {}", i, name);
+        }
+
+        let from_input = prompt("Введите номер остановки ОТКУДА (или пустую строку для выхода): ");
+        if from_input.is_empty() {
+            break;
+        }
+        let from_idx = from_input.parse::<usize>().unwrap();
+
+        let to_input = prompt("Введите номер остановки КУДА: ");
+        let to_idx = to_input.parse::<usize>().unwrap();
+
+        let time_input = prompt("Введите базовое время в пути (в минутах, например 15.5): ");
+        let base_time = time_input.parse::<f32>().unwrap();
+
+        let route_state = RouteState::new(base_time);
+
+        graph.add_edge(nodes[from_idx].0, nodes[to_idx].0, route_state);
+        println!("Ребро добавлено!");
+    }
+
+    let json_data = serde_json::to_string_pretty(&graph).unwrap();
+    fs::write("graph.json", &json_data).unwrap();
+
+    println!("\nУспех! Файл graph.json сгенерирован и готов к работе.");
+}
+
+pub fn load_graph() -> Result<Graph<Stop, RouteState>, anyhow::Error> {
     let loaded_json = fs::read_to_string("graph.json")?;
-    let loaded_graph: Graph<Stop, ml::RouteState> = serde_json::from_str(&loaded_json)?;
+    let loaded_graph: Graph<Stop, RouteState> = serde_json::from_str(&loaded_json)?;
     println!("Граф успешно загружен из файла!");
     Ok(loaded_graph)
 }
 
-pub fn save_graph(graph: &Graph<Stop, ml::RouteState>) -> anyhow::Result<()> {
+pub fn save_graph(graph: &Graph<Stop, RouteState>) -> anyhow::Result<()> {
     let json_data = serde_json::to_string_pretty(&graph)?;
     fs::write("graph.json", &json_data)?;
     println!("Граф успешно сохранен в graph.json!");

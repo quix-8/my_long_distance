@@ -63,8 +63,8 @@ impl RouteState {
     }
 
     // Метод предсказания новых весов
-    pub fn get_predicted_cost(&self, target_day: usize, today_days: u32) -> f32 {
-        let predict = (self.base_time + self.trend) * self.seasonal_factors[target_day];
+    pub fn get_predicted_cost(&self, day_of_week: usize, today_days: u32) -> f32 {
+        let predict = (self.base_time + self.trend) * self.seasonal_factors[day_of_week];
         let left_behind = today_days - self.last_updated_days;
         let risk = (self.variance * (1.05_f32).powi(left_behind as i32)).min(15.0);
         predict + risk
