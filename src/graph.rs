@@ -96,15 +96,14 @@ pub fn find_best_route(
     }
 }
 
-fn prompt(message: &str) -> String {
+fn prompt(message: &str) -> Result<String, anyhow::Error> {
     print!("{}", message);
-    io::stdout().flush().unwrap();
+    io::stdout().flush()?;
     let mut input = String::new();
-    io::stdin().read_line(&mut input).unwrap();
-    input.trim().to_string()
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().to_string())
 }
 
-// USAFE!! REWRITE WITHOUT .unwrap();
 pub fn generate() {
     println!("=== Генератор Графа ===");
     let mut graph = Graph::<Stop, RouteState>::new();
@@ -113,11 +112,16 @@ pub fn generate() {
     println!("\n--- Добавление остановок ---");
     loop {
         let name = prompt("Введите название остановки (или пустую строку для завершения): ");
-        if name.is_empty() {
-            break;
+        match name {
+            Ok(name) => {
+                if name.is_empty() {
+                    break;
+                }
+                let node_index = graph.add_node(Stop { name: name.clone() });
+                nodes.push((node_index, name));
+            }
+            Err(e) => eprint!("Ошибка при записи ответа: {}", e),
         }
-        let node_index = graph.add_node(Stop { name: name.clone() });
-        nodes.push((node_index, name));
     }
 
     println!("\n--- Создание маршрутов (ребер) ---");
@@ -128,16 +132,58 @@ pub fn generate() {
         }
 
         let from_input = prompt("Введите номер остановки ОТКУДА (или пустую строку для выхода): ");
-        if from_input.is_empty() {
-            break;
-        }
-        let from_idx = from_input.parse::<usize>().unwrap();
+        let from_idx = match from_input {
+            Ok(input) if input.is_empty() => break,
+            Ok(input) => match input.parse::<usize>() {
+                Ok(idx) if idx < nodes.len() => idx,
+                Ok(_) => {
+                    eprintln!("Ошибка: индекс остановки вне диапазона.");
+                    continue;
+                }
+                Err(_) => {
+                    eprintln!("Ошибка: введите корректное число.");
+                    continue;
+                }
+            },
+            Err(e) => {
+                eprintln!("Ошибка при записи ответа: {}", e);
+                continue;
+            }
+        };
 
         let to_input = prompt("Введите номер остановки КУДА: ");
-        let to_idx = to_input.parse::<usize>().unwrap();
+        let to_idx = match to_input {
+            Ok(input) => match input.parse::<usize>() {
+                Ok(idx) if idx < nodes.len() => idx,
+                Ok(_) => {
+                    eprintln!("Ошибка: индекс остановки вне диапазона.");
+                    continue;
+                }
+                Err(_) => {
+                    eprintln!("Ошибка: введите корректное число.");
+                    continue;
+                }
+            },
+            Err(e) => {
+                eprintln!("Ошибка при записи ответа: {}", e);
+                continue;
+            }
+        };
 
         let time_input = prompt("Введите базовое время в пути (в минутах, например 15.5): ");
-        let base_time = time_input.parse::<f32>().unwrap();
+        let base_time = match time_input {
+            Ok(input) => match input.parse::<f32>() {
+                Ok(t) => t,
+                Err(_) => {
+                    eprintln!("Ошибка: введите корректное число с плавающей точкой.");
+                    continue;
+                }
+            },
+            Err(e) => {
+                eprintln!("Ошибка при записи ответа: {}", e);
+                continue;
+            }
+        };
 
         let route_state = RouteState::new(base_time);
 
@@ -145,10 +191,16 @@ pub fn generate() {
         println!("Ребро добавлено!");
     }
 
-    let json_data = serde_json::to_string_pretty(&graph).unwrap();
-    fs::write("graph.json", &json_data).unwrap();
-
-    println!("\nУспех! Файл graph.json сгенерирован и готов к работе.");
+    match serde_json::to_string_pretty(&graph) {
+        Ok(json_data) => {
+            if let Err(e) = fs::write("graph.json", &json_data) {
+                eprintln!("Ошибка при записи файла: {}", e);
+            } else {
+                println!("\nУспех! Файл graph.json сгенерирован и готов к работе.");
+            }
+        }
+        Err(e) => eprintln!("Ошибка при сериализации графа: {}", e),
+    }
 }
 
 pub fn load_graph() -> Result<Graph<Stop, RouteState>, anyhow::Error> {
