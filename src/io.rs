@@ -13,12 +13,6 @@ use std::io;
 use crate::graph::Stop;
 use crate::ml::RouteState;
 
-// #[derive(Debug, serde::Deserialize)]
-// pub struct Bus {
-//     id: u8,
-//     time: DateTime<Local>,
-// }
-
 #[derive(Deserialize, Debug)]
 #[serde(untagged)]
 pub enum TimeInput {
@@ -72,4 +66,16 @@ pub fn get_data_map(
 ) -> Result<HashMap<String, petgraph::graph::EdgeIndex>, anyhow::Error> {
     let log_map: HashMap<String, petgraph::graph::EdgeIndex> = HashMap::new();
     Ok(log_map)
+}
+
+pub fn get_days_map() -> HashMap<String, usize> {
+    let mut days: HashMap<String, usize> = HashMap::new();
+    days.insert("Понедельник".to_string(), 0);
+    days.insert("Вторник".to_string(), 1);
+    days.insert("Среда".to_string(), 2);
+    days.insert("Четверг".to_string(), 3);
+    days.insert("Пятница".to_string(), 4);
+    days.insert("Суббота".to_string(), 5);
+    days.insert("Воскресенье".to_string(), 6);
+    days
 }
